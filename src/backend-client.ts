@@ -33,37 +33,6 @@ export class BackendZapdosClient extends ZapdosBaseClient {
     return new ResourceRequestBuilderWithSelect<T>(this, resource);
   }
 
-  /**
-   * Calls the /v1/token endpoint and returns the response as text.
-   */
-  async token(): Promise<
-    | {
-        data: {
-          token: string;
-        };
-        error?: undefined;
-      }
-    | {
-        error: {
-          message: string;
-        };
-        data?: undefined;
-      }
-  > {
-    const response = await axios.post(
-      `${this.baseUrl}/v1/token`,
-      {},
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-      },
-    );
-
-    return response.data;
-  }
-
   getAuthHeader(): Record<string, string> {
     return {
       Authorization: `Bearer ${this.apiKey}`,
@@ -120,30 +89,12 @@ export class BackendZapdosClient extends ZapdosBaseClient {
 
     return ws;
   }
-  /**
-   * Signs a JWT token for presigned access using the API key as the secret.
-   */
-  signToken({
-    objectIds = [],
-    expiresInSeconds = 600, // 10 minutes
-  }: {
-    objectIds?: string[];
-    expiresInSeconds?: number;
-  }): { token: string } {
-    const now = Math.floor(Date.now() / 1000); // current time in seconds
-    const exp = now + expiresInSeconds;
 
-    const claims: jwt.JwtPayload = {
-      aud: ["api"],
-      iat: now,
-      exp,
-      access: {
-        objects: objectIds,
-      },
-    };
-
-    const token = jwt.sign(claims, this.apiKey, { algorithm: "HS256" });
-
-    return { token };
+  async getUploadUrl(object_ids: string[]) {
+    const url = `${this.baseUrl}/v1/signed-url/get`;
+    const params = { ids: object_ids.join(",") };
+    const headers = this.getAuthHeader();
+    const response = await axios.get(url, { params, headers });
+    return response.data;
   }
 }

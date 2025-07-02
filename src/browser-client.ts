@@ -162,44 +162,4 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
       "X-Token": await this.getSignedToken(),
     };
   }
-
-  async listen(opts: WebSocketOptions) {
-    const token = await this.getSignedToken();
-    const ws = new WebSocket(this.wsBaseUrl, [`X-Token.${token}`]);
-
-    ws.onopen = (event) => {
-      console.log("WebSocket connected");
-      opts.onOpen?.(event);
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        try {
-          opts.onMessage?.(data);
-        } catch (error) {
-          console.error("Error in onMessage callback:", error);
-        }
-      } catch (error) {
-        console.error("Failed to parse WebSocket message:", error);
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      opts.onError?.(error);
-    };
-
-    ws.onclose = (event) => {
-      console.log("WebSocket disconnected:", event.code, event.reason);
-      opts.onClose?.(event);
-    };
-
-    return ws;
-  }
-
-  async download(objectId: string) {
-    const token = await this.getSignedToken();
-    const url = `${this.baseUrl}/v1/storage`;
-  }
 }
