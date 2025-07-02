@@ -6,9 +6,7 @@ export interface BackendClientOptions extends BaseClientOptions {
   apiKey: string;
 }
 
-export interface BrowserClientOptions extends BaseClientOptions {
-  getSignedToken: () => Promise<string>;
-}
+export interface BrowserClientOptions extends BaseClientOptions {}
 
 export type Environment = "browser" | "backend";
 
@@ -95,8 +93,5 @@ export interface JobItem {
 export type JobsResponse = Maybe<JobItem[]>;
 
 export type GetUploadUrlsResult = {
-  data: {
-    urls: Record<string, string>;
-    expires_at: string;
-  };
+  data: string[];
 };

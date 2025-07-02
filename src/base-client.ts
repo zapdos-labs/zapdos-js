@@ -1,4 +1,4 @@
-import type { Environment, WebSocketOptions } from "./types";
+import type { BaseClientOptions, Environment } from "./types";
 
 /**
  * Abstract base class for Zapdos clients.
@@ -9,8 +9,9 @@ export abstract class ZapdosBaseClient {
   public readonly baseUrl: string;
   public readonly wsBaseUrl: string;
 
-  constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl?.replace(/\/+$/, "") || "https://api.zapdoslabs.com";
+  constructor(opts: BaseClientOptions) {
+    this.baseUrl =
+      opts.baseUrl?.replace(/\/+$/, "") || "https://api.zapdoslabs.com";
     if (this.baseUrl.startsWith("https://")) {
       this.wsBaseUrl = this.baseUrl.replace("https://", "wss://") + "/v1/ws";
     } else if (this.baseUrl.startsWith("http://")) {

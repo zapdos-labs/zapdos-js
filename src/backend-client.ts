@@ -18,7 +18,7 @@ export class BackendZapdosClient extends ZapdosBaseClient {
   public readonly apiKey: string;
 
   constructor(options: BackendClientOptions) {
-    super(options.baseUrl);
+    super(options);
     if (!options) {
       throw new Error("Missing backend client options");
     }
@@ -96,6 +96,7 @@ export class BackendZapdosClient extends ZapdosBaseClient {
     const params = { quantity };
     const headers = this.getAuthHeader();
     const response = await axios.get(url, { params, headers });
+    // New format: { data: string[] }
     const result: GetUploadUrlsResult = response.data;
     return result;
   }
