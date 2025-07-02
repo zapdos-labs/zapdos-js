@@ -153,8 +153,6 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
         },
       });
 
-      // TODO: create indexing job using objectId
-
       opts.onData({ object_id });
     } catch (error: any) {
       opts.onError({
@@ -171,11 +169,10 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
     object_id: string;
     metadata: Record<string, any>;
   }) {
-    console.log("updateObjectMetadata called");
     try {
       await axios.patch(
         `${this.baseUrl}/v1/storage/${opts.object_id}`,
-        { metadata: opts.metadata },
+        { metadata: opts.metadata, create_indexing_job: true },
         {
           headers: {
             "X-Zapdos-Token": opts.token,
