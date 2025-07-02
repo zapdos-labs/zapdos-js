@@ -1,0 +1,50 @@
+{
+  "name": "zapdos-js",
+  "version": "1.0.3",
+  "description": "Zapdos client library for browser and backend environments",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.es.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && vite build",
+    "dev": "vite build --watch",
+    "prepublishOnly": "npm run build",
+    "type-check": "tsc --noEmit",
+    "test": "npm run test:node && npm run test:common"
+  },
+  "keywords": [
+    "zapdos",
+    "video",
+    "ai",
+    "client",
+    "browser",
+    "backend",
+    "typescript"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0",
+    "vite-plugin-dts": "^4.5.4"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.cjs.js"
+    }
+  },
+  "dependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "axios": "^1.10.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
