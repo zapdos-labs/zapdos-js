@@ -93,3 +93,10 @@ export interface JobItem {
  * Type for the jobs response.
  */
 export type JobsResponse = Maybe<JobItem[]>;
+
+export type GetUploadUrlsResult = {
+  data: {
+    urls: Record<string, string>;
+    expires_at: string;
+  };
+};

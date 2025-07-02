@@ -5,6 +5,7 @@ import { ResourceRequestBuilderWithSelect } from "./resource-request-builder";
 import type {
   BackendClientOptions,
   Environment,
+  GetUploadUrlsResult,
   JobsResponse,
   ObjectStorageResponse,
   WebSocketOptions,
@@ -90,11 +91,12 @@ export class BackendZapdosClient extends ZapdosBaseClient {
     return ws;
   }
 
-  async getUploadUrl(object_ids: string[]) {
-    const url = `${this.baseUrl}/v1/signed-url/get`;
-    const params = { ids: object_ids.join(",") };
+  async getUploadUrls(quantity?: number) {
+    const url = `${this.baseUrl}/v1/signed-url/put`;
+    const params = { quantity };
     const headers = this.getAuthHeader();
     const response = await axios.get(url, { params, headers });
-    return response.data;
+    const result: GetUploadUrlsResult = response.data;
+    return result;
   }
 }
