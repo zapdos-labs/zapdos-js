@@ -169,20 +169,44 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
     object_id: string;
     metadata: Record<string, any>;
   }) {
-    try {
-      await axios.patch(
-        `${this.baseUrl}/v1/storage/${opts.object_id}`,
-        { metadata: opts.metadata, create_indexing_job: true },
-        {
-          headers: {
-            "X-Zapdos-Token": opts.token,
-            ...(await this.getAuthHeader()),
-          },
-        },
-      );
-    } catch (error: any) {
-      // Optionally handle/log error
-      console.error("Failed to update object metadata", error);
+    // Use fetch to stream and log NDJSON
+    const url = `${this.baseUrl}/v1/storage/${opts.object_id}`;
+    const headers: Record<string, string> = {
+      "X-Zapdos-Token": opts.token,
+      ...(await this.getAuthHeader()),
+      "Content-Type": "application/json",
+    };
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ metadata: opts.metadata, create_indexing_job: true }),
+    });
+    if (!response.body) return;
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let lines = buffer.split("\n");
+      buffer = lines.pop()!;
+      for (const line of lines) {
+        if (line.trim()) {
+          try {
+            console.log("NDJSON message:", JSON.parse(line));
+          } catch (e) {
+            console.warn("Failed to parse NDJSON line", line);
+          }
+        }
+      }
+    }
+    if (buffer.trim()) {
+      try {
+        console.log("NDJSON message:", JSON.parse(buffer));
+      } catch (e) {
+        console.warn("Failed to parse NDJSON line", buffer);
+      }
     }
   }
 
