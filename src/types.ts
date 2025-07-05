@@ -6,28 +6,20 @@ export interface BackendClientOptions extends BaseClientOptions {
   apiKey: string;
 }
 
-export interface BrowserClientOptions extends BaseClientOptions {}
+export interface BrowserClientOptions extends BaseClientOptions { }
 
 export type Environment = "browser" | "backend";
 
-export type OnProgressCallback = (progressItem: {
-  value: number;
-  file_index: number;
-}) => void;
 
-export type FileUploadErrorPartial = {
-  message: string;
-};
 
-export type FileUploadError = FileUploadErrorPartial & {
-  file_index: number;
-};
+// export type FileUploadError = FileUploadErrorPartial & {
+//   file_index: number;
+// };
 
-export type FileUploadSuccessPartial = {};
 
-export type FileUploadSuccess = FileUploadSuccessPartial & {
-  file_index: number;
-};
+// export type FileUploadSuccess = FileUploadSuccessPartial & {
+//   file_index: number;
+// };
 
 /**
  * Utility type for API responses that may contain data or an error.
@@ -95,3 +87,89 @@ export type JobsResponse = Maybe<JobItem[]>;
 export type GetUploadUrlsResult = {
   data: string[];
 };
+
+export type UpdateMetadataReturnedJSON =
+  | { data: { type: "metadata_updated"; object_id: string } }
+  | { data: { type: "indexing_started"; job_id: string; object_id: string } }
+  | { data: { type: "indexing_completed"; job_id: string; object_id: string } }
+  | { data: { type: "indexing_failed"; job_id: string; object_id: string } };
+
+export type JobCallbacks = {
+  onIndexingStarted?: (props: { object_id: string }) => void;
+  onIndexingCompleted?: (props: { object_id: string }) => void;
+  onIndexingFailed?: (props: { object_id: string }) => void;
+}
+
+export type FileCallbacks = {
+  onError?: (error: {
+    message: string;
+  }) => void;
+  onData?: (data: { object_id: string }) => void;
+  onProgress?: (progress: { value: number }) => void
+}
+
+
+
+export type UploadCallbacks = {
+  file?: FileCallbacks
+  job?: JobCallbacks
+}
+
+
+// Utility type: Recursively extends the first argument of all function properties with Ext
+export type ExtendArgs<T, Ext extends object> = {
+  [K in keyof T]: T[K] extends ((arg: infer A) => infer R) | undefined
+  ? ((arg: A & Ext) => R) | undefined
+  : T[K] extends object | undefined
+  ? T[K] extends (...args: any) => any
+  ? T[K]
+  : T[K] extends undefined
+  ? undefined
+  : ExtendArgs<NonNullable<T[K]>, Ext> | Extract<T[K], undefined>
+  : T[K];
+};
+
+export type UploadCallbacksWithFileIndex = ExtendArgs<UploadCallbacks, { file_index: number }>;
+
+// Utility type to remove extension from callback arguments
+export type UnextendArgs<T, Ext extends object> = {
+  [K in keyof T]: T[K] extends ((arg: infer A) => infer R) | undefined
+  ? A extends (Ext & infer Rest)
+  ? ((arg: Rest) => R) | undefined
+  : T[K]
+  : T[K] extends object | undefined
+  ? T[K] extends (...args: any) => any
+  ? T[K]
+  : T[K] extends undefined
+  ? undefined
+  : UnextendArgs<NonNullable<T[K]>, Ext> | Extract<T[K], undefined>
+  : T[K];
+};
+
+export function unextendCallbacks<T, Ext extends object>(
+  callbacks: ExtendArgs<T, Ext> | undefined,
+  ext: Ext
+): T | undefined {
+  if (!callbacks) return undefined;
+
+  const result = {} as T;
+
+  for (const key in callbacks) {
+    const value = callbacks[key];
+
+    if (typeof value === 'function') {
+      // Create a new function that calls the original with the extended arguments
+      (result as any)[key] = (arg: any) => {
+        return value({ ...arg, ...ext });
+      };
+    } else if (value && typeof value === 'object') {
+      // Recursively handle nested objects
+      (result as any)[key] = unextendCallbacks(value, ext);
+    } else {
+      // Copy primitive values as-is
+      (result as any)[key] = value;
+    }
+  }
+
+  return result;
+}

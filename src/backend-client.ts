@@ -59,6 +59,7 @@ export class BackendZapdosClient extends ZapdosBaseClient {
 
   listen(opts: WebSocketOptions) {
     const ws = new WebSocket(this.wsBaseUrl);
+    // TODO: API key headers
 
     ws.onopen = (event) => {
       console.log("WebSocket connected");

@@ -1,16 +1,14 @@
 import axios from "axios";
 import { ZapdosBaseClient } from "./base-client";
+import { unextendCallbacks } from "./types";
 
 import {
   BrowserClientOptions,
   Environment,
-  FileUploadError,
-  FileUploadErrorPartial,
-  FileUploadSuccess,
-  FileUploadSuccessPartial,
-  OnProgressCallback,
+  UploadCallbacks,
+  UploadCallbacksWithFileIndex
 } from "./types";
-import { extractCustomParams } from "./utils";
+import { extractCustomParams, parseNDJSONStream } from "./utils";
 
 export class BrowserZapdosClient extends ZapdosBaseClient {
   public get environment(): Environment {
@@ -38,11 +36,7 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
   public async upload(
     signedUrls: string | string[],
     files: File | File[],
-    options?: {
-      onFileProgress?: OnProgressCallback;
-      onFileSuccess?: (data: FileUploadSuccess) => void;
-      onFileError?: (error: FileUploadError) => void;
-    },
+    on?: UploadCallbacksWithFileIndex,
   ) {
     const fileArray = Array.isArray(files) ? files : [files];
     const urlArray = typeof signedUrls === "string" ? [signedUrls] : signedUrls;
@@ -53,47 +47,39 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
 
     const uploadPromises: Promise<
       | {
-        data: FileUploadSuccess;
+        data: any;
         error?: undefined;
       }
       | {
-        error: FileUploadError;
+        error: any;
         data?: undefined;
       }
     >[] = fileArray.map(
       (file, idx) =>
         new Promise((resolve, reject) => {
+          // We say that upload method is responsible for passing { file_index: idx }, while uploadFile responsible for the rest of the callbacks args
+          const minimalCallbacks = unextendCallbacks(on, { file_index: idx });
+          const hookedCallbacks = {
+            ...minimalCallbacks,
+            file: {
+              ...minimalCallbacks?.file,
+              onData: (props: any) => {
+                console.log('onData is called');
+                resolve({ data: { ...props, file_index: idx } });
+              },
+              onError: (args: any) => {
+                console.log('onError is called');
+                resolve({ error: { ...args, file_index: idx } });
+              }
+            },
+          }
+
           this.uploadFile({
             signedUrl: urlArray[idx],
             file,
-            onProgress(progress) {
-              options?.onFileProgress?.({
-                file_index: idx,
-                value: progress,
-              });
-            },
-            onError(error) {
-              const fileError: FileUploadError = {
-                file_index: idx,
-                ...error,
-              };
-              options?.onFileError?.(fileError);
-              resolve({
-                error: fileError,
-              });
-            },
-            onData(data) {
-              const fileSuccess = {
-                ...data,
-                file_index: idx,
-              };
-              options?.onFileSuccess?.(fileSuccess);
-              resolve({
-                data: fileSuccess,
-              });
-            },
+            on: hookedCallbacks
           });
-        }),
+        })
     );
 
     const results = await Promise.all(uploadPromises);
@@ -109,9 +95,7 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
   private async uploadFile(opts: {
     signedUrl: string;
     file: File;
-    onProgress: (progress: number) => void;
-    onError: (error: FileUploadErrorPartial) => void;
-    onData: (data: FileUploadSuccessPartial & { object_id?: string }) => void;
+    on?: UploadCallbacks
   }) {
     try {
       // Get object_id from signed URL
@@ -133,16 +117,15 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
         },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
-            const progress = (progressEvent.loaded / progressEvent.total) * 100;
-            opts.onProgress(progress);
+            const value = (progressEvent.loaded / progressEvent.total) * 100;
+            opts.on?.file?.onProgress?.({ value });
           }
         },
       });
 
-      console.log("response.data", response.data);
-
+      console.log('call updateObjectMetadata');
       // Update database metadata using objectId and token, always passing metadata from File object
-      await this.updateObjectMetadata({
+      const stream = await this.updateObjectMetadata({
         token,
         object_id,
         metadata: {
@@ -153,9 +136,19 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
         },
       });
 
-      opts.onData({ object_id });
+      if (!stream) {
+        throw new Error("No response body from metadata update");
+      }
+
+      for await (const msg of stream) {
+        // TODO: Handle each message from the NDJSON stream
+        console.log("Metadata update message:", msg);
+      }
+
+      console.log("File uploaded successfully", object_id);
+      opts.on?.file?.onData?.({ object_id });
     } catch (error: any) {
-      opts.onError({
+      opts.on?.file?.onError?.({
         message:
           error.response?.data?.error?.msg ||
           error.message ||
@@ -182,32 +175,9 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
       body: JSON.stringify({ metadata: opts.metadata, create_indexing_job: true }),
     });
     if (!response.body) return;
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      let lines = buffer.split("\n");
-      buffer = lines.pop()!;
-      for (const line of lines) {
-        if (line.trim()) {
-          try {
-            console.log("NDJSON message:", JSON.parse(line));
-          } catch (e) {
-            console.warn("Failed to parse NDJSON line", line);
-          }
-        }
-      }
-    }
-    if (buffer.trim()) {
-      try {
-        console.log("NDJSON message:", JSON.parse(buffer));
-      } catch (e) {
-        console.warn("Failed to parse NDJSON line", buffer);
-      }
-    }
+
+    const stream = parseNDJSONStream(response.body);
+    return stream;
   }
 
   async getAuthHeader() {

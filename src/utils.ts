@@ -1,4 +1,36 @@
 /**
+ * Async generator to parse a ReadableStream of NDJSON and yield each JSON object.
+ */
+export async function* parseNDJSONStream(stream: ReadableStream<Uint8Array>) {
+  const decoder = new TextDecoder();
+  const reader = stream.getReader();
+  let buffer = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let lines = buffer.split("\n");
+    buffer = lines.pop()!;
+    for (const line of lines) {
+      if (line.trim()) {
+        try {
+          yield JSON.parse(line);
+        } catch (e) {
+          console.warn("Failed to parse NDJSON line", line, e);
+        }
+      }
+    }
+  }
+  if (buffer.trim()) {
+    try {
+      yield JSON.parse(buffer);
+    } catch (e) {
+      console.warn("Failed to parse NDJSON line", buffer, e);
+    }
+  }
+}
+
+/**
  * Utility to extract specified query params from a URL and return both:
  * - a dictionary of param values
  * - the URL with those params removed from the query string
