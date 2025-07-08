@@ -1,6 +1,6 @@
 {
   "name": "zapdos-js",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Zapdos client library for browser and backend environments",
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
@@ -44,7 +44,9 @@
   },
   "dependencies": {
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/ws": "^8.18.1",
     "axios": "^1.10.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "ws": "^8.18.3"
   }
 }

@@ -1,14 +1,11 @@
-import axios from "axios";
 import { ZapdosBaseClient } from "./base-client";
-import { unextendCallbacks } from "./types";
+import { batchUpload, parseNDJSONStream, parseSignedUrl } from "./utils";
 
 import {
   BrowserClientOptions,
   Environment,
-  UploadCallbacks,
   UploadCallbacksWithFileIndex
 } from "./types";
-import { extractCustomParams, parseNDJSONStream } from "./utils";
 
 export class BrowserZapdosClient extends ZapdosBaseClient {
   public get environment(): Environment {
@@ -26,12 +23,7 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
   }
 
   /**
-   * Upload one or multiple files
-   */
-  /**
-   * Upload one or multiple files using a single presigned URL (string) or an array of presigned URLs (string[]).
-   * If a single file is provided, a single URL (string) can be used.
-   * If multiple files are provided, an array of URLs (string[]) must be used.
+   * Upload one or multiple files using presigned URLs
    */
   public async upload(
     signedUrls: string | string[],
@@ -45,116 +37,40 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
       throw new Error("Number of signed URLs must match number of files");
     }
 
-    const uploadPromises: Promise<
-      | {
-        data: any;
-        error?: undefined;
-      }
-      | {
-        error: any;
-        data?: undefined;
-      }
-    >[] = fileArray.map(
-      (file, idx) =>
-        new Promise((resolve, reject) => {
-          // We say that upload method is responsible for passing { file_index: idx }, while uploadFile responsible for the rest of the callbacks args
-          const minimalCallbacks = unextendCallbacks(on, { file_index: idx });
-          const hookedCallbacks = {
-            ...minimalCallbacks,
-            file: {
-              ...minimalCallbacks?.file,
-              onData: (props: any) => {
-                console.log('onData is called');
-                resolve({ data: { ...props, file_index: idx } });
-              },
-              onError: (args: any) => {
-                console.log('onError is called');
-                resolve({ error: { ...args, file_index: idx } });
-              }
+    const parsedUrls = urlArray.map((url) => parseSignedUrl(url));
+    const items = parsedUrls.map((parsedUrl, index) => {
+      const file = fileArray[index];
+      return {
+        url: parsedUrl.cleanedUrl,
+        data: file,
+        afterFileData: async () => {
+          console.log(`File ${file.name} uploaded successfully.`);
+          const stream = await this.updateObjectMetadata({
+            token: parsedUrl.token,
+            object_id: parsedUrl.object_id,
+            metadata: {
+              file_name: file.name,
+              size: file.size,
+              content_type: file.type || "application/octet-stream",
+              kind: "video",
             },
-          }
-
-          this.uploadFile({
-            signedUrl: urlArray[idx],
-            file,
-            on: hookedCallbacks
           });
-        })
-    );
 
-    const results = await Promise.all(uploadPromises);
-    return results.toSorted(
-      (a, b) => (a.data || a.error).file_index - (b.data || b.error).file_index,
-    );
-  }
-
-  /**
-   * Private method to handle the actual file upload logic for a single file, using Axios
-   * Uses PUT and sends raw file bytes for S3 presigned URL compatibility
-   */
-  private async uploadFile(opts: {
-    signedUrl: string;
-    file: File;
-    on?: UploadCallbacks
-  }) {
-    try {
-      // Get object_id from signed URL
-      const { params, cleanedUrl } = extractCustomParams(opts.signedUrl, [
-        "X-Zapdos-Obj-Id",
-        "X-Zapdos-Token",
-      ]);
-      const token = params["X-Zapdos-Token"];
-      const object_id = params["X-Zapdos-Obj-Id"];
-      if (!object_id || !token) {
-        throw new Error("Malformed signed url");
-      }
-
-      console.log("Uploading", token, object_id);
-      const response = await axios.put(cleanedUrl, opts.file, {
-        headers: {
-          ...(await this.getAuthHeader()),
-          "Content-Type": opts.file.type || "application/octet-stream",
-        },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const value = (progressEvent.loaded / progressEvent.total) * 100;
-            opts.on?.file?.onProgress?.({ value });
+          if (stream) {
+            for await (const msg of stream) {
+              console.log("Metadata update message:", msg);
+            }
           }
         },
-      });
-
-      console.log('call updateObjectMetadata');
-      // Update database metadata using objectId and token, always passing metadata from File object
-      const stream = await this.updateObjectMetadata({
-        token,
-        object_id,
-        metadata: {
-          file_name: opts.file.name,
-          size: opts.file.size,
-          content_type: opts.file.type || "application/octet-stream",
-          kind: "video",
-        },
-      });
-
-      if (!stream) {
-        throw new Error("No response body from metadata update");
       }
+    });
 
-      for await (const msg of stream) {
-        // TODO: Handle each message from the NDJSON stream
-        console.log("Metadata update message:", msg);
-      }
-
-      console.log("File uploaded successfully", object_id);
-      opts.on?.file?.onData?.({ object_id });
-    } catch (error: any) {
-      opts.on?.file?.onError?.({
-        message:
-          error.response?.data?.error?.msg ||
-          error.message ||
-          "Network error during upload",
-      });
-    }
+    return batchUpload({
+      items,
+      callbacks: on,
+      method: "PUT",
+      authHeader: await this.getAuthHeader(),
+    })
   }
 
   private async updateObjectMetadata(opts: {

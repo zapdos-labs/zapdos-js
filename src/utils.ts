@@ -1,3 +1,7 @@
+import axios from "axios";
+import { unextendCallbacks, UploadCallbacks, UploadCallbacksWithFileIndex } from "./types";
+import { ReadStream } from "fs";
+
 /**
  * Async generator to parse a ReadableStream of NDJSON and yield each JSON object.
  */
@@ -56,4 +60,132 @@ export function extractCustomParams(
       cleanedUrl: url,
     };
   }
+}
+
+
+export async function axiosUpload({
+  url,
+  method = "POST",
+  file,
+  headers = {},
+  callbacks
+}: {
+  url: string;
+  method?: "POST" | "PUT";
+  file: ReadStream | File;
+  headers?: Record<string, string>;
+  callbacks?: UploadCallbacks;
+}) {
+  try {
+    const response = await axios({
+      url,
+      method,
+      data: file,
+      headers,
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      onUploadProgress: (progressEvent) => {
+        const value = progressEvent.total
+          ? Math.round((progressEvent.loaded / progressEvent.total) * 100)
+          : 0;
+        callbacks?.file?.onProgress?.({ value });
+      },
+    });
+    callbacks?.file?.onData?.(response.data);
+    return response.data;
+  } catch (error: any) {
+    callbacks?.file?.onError?.({ message: error.message || "Upload failed" });
+    throw error;
+  }
+}
+
+export function prepareMinimalCallbacks(callbacks: UploadCallbacksWithFileIndex, fileIndex: number, resolve: (result: Result) => void): UploadCallbacks | undefined {
+  if (!callbacks) return undefined;
+
+  const minimalCallbacks = unextendCallbacks(callbacks, { file_index: fileIndex });
+  return {
+    ...minimalCallbacks,
+    file: {
+      ...minimalCallbacks?.file,
+
+      onData: (props) => {
+        const result = { ...props, file_index: fileIndex };
+        minimalCallbacks?.file?.onData?.(result);
+        resolve({
+          data: result
+        });
+        return result;
+      },
+      onError: (args) => {
+        const result = { ...args, file_index: fileIndex };
+        minimalCallbacks?.file?.onError?.(result);
+        resolve({
+          error: result
+        });
+        return result;
+      }
+    },
+  };
+}
+
+type Result = {
+  data: {
+    file_index: number;
+  };
+  error?: undefined;
+} | {
+  data?: undefined;
+  error: {
+    file_index: number;
+  };
+}
+
+type UploadItem = {
+  data: ReadStream | File;
+  url: string;
+  afterFileData: () => Promise<void>;
+}
+
+/**
+ * Common batch upload handler for both browser and backend clients
+ */
+export async function batchUpload(opts: {
+  authHeader?: Record<string, string>;
+  method: "POST" | "PUT";
+  items: UploadItem[];
+  callbacks?: UploadCallbacksWithFileIndex;
+}) {
+  const uploadPromises = opts.items.map((item, idx) =>
+    new Promise<Result>(async (resolve) => {
+      let minimumCallbacks: UploadCallbacks | undefined = undefined;
+      if (opts.callbacks) {
+        minimumCallbacks = prepareMinimalCallbacks(opts.callbacks, idx, resolve);
+      }
+      const result = await axiosUpload({
+        url: item.url,
+        method: opts.method,
+        file: item.data,
+        headers: opts.authHeader,
+        callbacks: minimumCallbacks,
+      });
+
+      return { data: result };
+    })
+  );
+  const results = await Promise.all(uploadPromises);
+  return results.toSorted((a, b) => (a?.data || a.error).file_index - (b?.data || b.error).file_index);
+}
+
+export function parseSignedUrl(signedUrl: string) {
+  const { params, cleanedUrl } = extractCustomParams(signedUrl, [
+    "X-Zapdos-Obj-Id",
+    "X-Zapdos-Token",
+  ]);
+  const token = params["X-Zapdos-Token"];
+  const object_id = params["X-Zapdos-Obj-Id"];
+  if (!object_id || !token) {
+    throw new Error("Malformed signed url");
+  }
+
+  return { token, object_id, cleanedUrl };
 }

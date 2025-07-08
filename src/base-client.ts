@@ -29,4 +29,6 @@ export abstract class ZapdosBaseClient {
   abstract getAuthHeader():
     | Promise<Record<string, string>>
     | Record<string, string>;
+
+
 }

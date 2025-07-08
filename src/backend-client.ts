@@ -1,5 +1,6 @@
 import axios from "axios";
-import jwt from "jsonwebtoken";
+import fs from "fs";
+import WebSocketImpl from "ws";
 import { ZapdosBaseClient } from "./base-client";
 import { ResourceRequestBuilderWithSelect } from "./resource-request-builder";
 import type {
@@ -8,8 +9,10 @@ import type {
   GetUploadUrlsResult,
   JobsResponse,
   ObjectStorageResponse,
+  UploadCallbacksWithFileIndex,
   WebSocketOptions,
 } from "./types";
+import { batchUpload } from "./utils";
 
 export class BackendZapdosClient extends ZapdosBaseClient {
   public get environment(): Environment {
@@ -58,15 +61,17 @@ export class BackendZapdosClient extends ZapdosBaseClient {
   }
 
   listen(opts: WebSocketOptions) {
-    const ws = new WebSocket(this.wsBaseUrl);
-    // TODO: API key headers
+    // Always use ws package in backend
+    const ws = new WebSocketImpl(this.wsBaseUrl, {
+      headers: this.getAuthHeader(),
+    });
 
-    ws.onopen = (event) => {
+    ws.onopen = (event: any) => {
       console.log("WebSocket connected");
       opts.onOpen?.(event);
     };
 
-    ws.onmessage = (event) => {
+    ws.onmessage = (event: any) => {
       try {
         const data = JSON.parse(event.data);
         try {
@@ -79,12 +84,12 @@ export class BackendZapdosClient extends ZapdosBaseClient {
       }
     };
 
-    ws.onerror = (error) => {
+    ws.onerror = (error: any) => {
       console.error("WebSocket error:", error);
       opts.onError?.(error);
     };
 
-    ws.onclose = (event) => {
+    ws.onclose = (event: any) => {
       console.log("WebSocket disconnected:", event.code, event.reason);
       opts.onClose?.(event);
     };
@@ -101,4 +106,32 @@ export class BackendZapdosClient extends ZapdosBaseClient {
     const result: GetUploadUrlsResult = response.data;
     return result;
   }
+
+  /**
+   * Upload one or multiple files from server using API key
+   */
+  public async upload(
+    files: string | string[],
+    on?: UploadCallbacksWithFileIndex,
+  ) {
+    const fileArray = Array.isArray(files) ? files : [files];
+    const items = fileArray.map(f => {
+      const data = fs.createReadStream(f);
+      return {
+        data,
+        url: `${this.baseUrl}/v1/storage/upload`,
+        afterFileData: async () => {
+          // Optionally, you can add any post-upload logic here
+          console.log(`File ${f} uploaded successfully.`);
+        }
+      }
+    })
+    return batchUpload({
+      method: "POST",
+      authHeader: this.getAuthHeader(),
+      items,
+      callbacks: on,
+    })
+  }
+
 }
