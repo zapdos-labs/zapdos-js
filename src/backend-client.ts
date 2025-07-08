@@ -1,5 +1,6 @@
 import axios from "axios";
 import fs from "fs";
+import path from "path";
 import WebSocketImpl from "ws";
 import { ZapdosBaseClient } from "./base-client";
 import { ResourceRequestBuilderWithSelect } from "./resource-request-builder";
@@ -10,9 +11,9 @@ import type {
   JobsResponse,
   ObjectStorageResponse,
   UploadCallbacksWithFileIndex,
+  UploadItem,
   WebSocketOptions,
 } from "./types";
-import { batchUpload } from "./utils";
 
 export class BackendZapdosClient extends ZapdosBaseClient {
   public get environment(): Environment {
@@ -34,7 +35,7 @@ export class BackendZapdosClient extends ZapdosBaseClient {
   }
 
   from<T = any>(resource: string): ResourceRequestBuilderWithSelect<T> {
-    return new ResourceRequestBuilderWithSelect<T>(this, resource);
+    return new ResourceRequestBuilderWithSelect<T>(this.baseUrl, this.getAuthHeader(), resource);
   }
 
   getAuthHeader(): Record<string, string> {
@@ -107,31 +108,36 @@ export class BackendZapdosClient extends ZapdosBaseClient {
     return result;
   }
 
-  /**
-   * Upload one or multiple files from server using API key
-   */
   public async upload(
-    files: string | string[],
-    on?: UploadCallbacksWithFileIndex,
+    filePaths: string | string[],
+    on?: UploadCallbacksWithFileIndex
   ) {
-    const fileArray = Array.isArray(files) ? files : [files];
-    const items = fileArray.map(f => {
-      const data = fs.createReadStream(f);
-      return {
-        data,
-        url: `${this.baseUrl}/v1/storage/upload`,
-        afterFileData: async () => {
-          // Optionally, you can add any post-upload logic here
-          console.log(`File ${f} uploaded successfully.`);
-        }
+    try {
+      const fileArray = Array.isArray(filePaths) ? filePaths : [filePaths];
+      const getSignedUrlsResult = await this.getUploadUrls(fileArray.length);
+      if (!getSignedUrlsResult.data || getSignedUrlsResult.data.length === 0) {
+        throw new Error("No signed URLs returned from server");
       }
-    })
-    return batchUpload({
-      method: "POST",
-      authHeader: this.getAuthHeader(),
-      items,
-      callbacks: on,
-    })
-  }
 
+      const items: UploadItem[] = fileArray.map((filePath, index) => {
+        const file = fs.statSync(filePath);
+
+        const name = path.basename(filePath);
+        if (!name) {
+          throw new Error(`Invalid file path: ${filePath}`);
+        }
+        return {
+          name,
+          url: getSignedUrlsResult.data[index],
+          size: file.size,
+          content_type: "application/octet-stream", // Default content type
+          data: fs.createReadStream(filePath),
+        };
+      });
+      return this.uploadWithSignedUrls(items, on);
+    } catch (error: any) {
+      console.error("Error during upload:", error);
+      return { error: { message: error.message || "Upload failed" } };
+    }
+  }
 }

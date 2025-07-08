@@ -1,3 +1,5 @@
+import { ReadStream } from "node:fs";
+
 export interface BaseClientOptions {
   baseUrl?: string;
 }
@@ -86,6 +88,10 @@ export type JobsResponse = Maybe<JobItem[]>;
 
 export type GetUploadUrlsResult = {
   data: string[];
+  error?: undefined
+} | {
+  error: { message: string };
+  data?: undefined
 };
 
 export type UpdateMetadataReturnedJSON =
@@ -172,4 +178,18 @@ export function unextendCallbacks<T, Ext extends object>(
   }
 
   return result;
+}
+
+export type UploadItem = {
+  name: string;
+  size: number;
+  content_type?: string;
+  url: string;
+  data: File | ReadStream;
+}
+
+export type AxiosUploadItem = {
+  url: string;
+  data: ReadStream | File;
+  afterFileData: () => Promise<void>;
 }

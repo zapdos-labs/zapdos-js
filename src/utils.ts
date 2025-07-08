@@ -1,5 +1,5 @@
 import axios from "axios";
-import { unextendCallbacks, UploadCallbacks, UploadCallbacksWithFileIndex } from "./types";
+import { AxiosUploadItem, unextendCallbacks, UploadCallbacks, UploadCallbacksWithFileIndex } from "./types";
 import { ReadStream } from "fs";
 
 /**
@@ -140,19 +140,13 @@ type Result = {
   };
 }
 
-type UploadItem = {
-  data: ReadStream | File;
-  url: string;
-  afterFileData: () => Promise<void>;
-}
-
 /**
  * Common batch upload handler for both browser and backend clients
  */
 export async function batchUpload(opts: {
   authHeader?: Record<string, string>;
   method: "POST" | "PUT";
-  items: UploadItem[];
+  items: AxiosUploadItem[];
   callbacks?: UploadCallbacksWithFileIndex;
 }) {
   const uploadPromises = opts.items.map((item, idx) =>

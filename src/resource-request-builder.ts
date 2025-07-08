@@ -38,37 +38,29 @@ import type { ZapdosBaseClient } from "./base-client";
 // This class is not exported. It contains the core logic for making the request
 // and handling the promise-like behavior.
 class RequestBuilderCore<T> {
-  protected client: ZapdosBaseClient;
-  protected resource: string;
-  protected queryParams: Record<string, any>;
-
   constructor(
-    client: ZapdosBaseClient,
-    resource: string,
-    queryParams: Record<string, any>,
+    public baseUrl: string,
+    public headers: Record<string, string>,
+    public resource: string,
+    public queryParams: Record<string, any>,
   ) {
-    this.client = client;
-    this.resource = resource;
-    this.queryParams = queryParams;
+
   }
 
   protected getPromise(): Promise<T | { error: any }> {
-    const url = `${this.client.baseUrl}/v1/query`;
+    const url = `${this.baseUrl}/v1/query`;
     // The request body is flattened, with `from` at the top level.
     const body = {
       from: this.resource,
       ...this.queryParams,
     };
 
-    return Promise.resolve(this.client.getAuthHeader())
-      .then((headers: Record<string, string>) =>
-        axios.post<T>(url, body, {
-          headers: {
-            "Content-Type": "application/json",
-            ...headers,
-          },
-        }),
-      )
+    return axios.post<T>(url, body, {
+      headers: {
+        "Content-Type": "application/json",
+        ...this.headers,
+      },
+    })
       .then((res: { data: T }) => res.data)
       .catch((error: any) => {
         if (
@@ -149,13 +141,12 @@ export class ResourceRequestBuilderSelected<T> extends RequestBuilderCore<T> {
  * enforcing the next step in the chain.
  */
 export class ResourceRequestBuilderWithSelect<T> {
-  private client: ZapdosBaseClient;
-  private resource: string;
 
-  constructor(client: ZapdosBaseClient, resource: string) {
-    this.client = client;
-    this.resource = resource;
-  }
+  constructor(
+    public baseUrl: string,
+    public headers: Record<string, string>,
+    public resource: string
+  ) { }
 
   /**
    * Specify which columns to return.
@@ -168,7 +159,8 @@ export class ResourceRequestBuilderWithSelect<T> {
       select: columns.length > 0 ? columns : ["*"], // Default to selecting all if no columns are provided
     };
     return new ResourceRequestBuilderSelected<T>(
-      this.client,
+      this.baseUrl,
+      this.headers,
       this.resource,
       queryParams,
     );
