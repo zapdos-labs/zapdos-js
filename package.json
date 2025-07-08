@@ -1,7 +1,7 @@
 {
   "name": "zapdos-js",
-  "version": "1.0.5",
-  "description": "Zapdos client library for browser and backend environments",
+  "version": "1.0.6",
+  "description": "Zapdos client library",
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
   "types": "dist/index.d.ts",
