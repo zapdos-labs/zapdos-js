@@ -12,17 +12,6 @@ export interface BrowserClientOptions extends BaseClientOptions { }
 
 export type Environment = "browser" | "backend";
 
-
-
-// export type FileUploadError = FileUploadErrorPartial & {
-//   file_index: number;
-// };
-
-
-// export type FileUploadSuccess = FileUploadSuccessPartial & {
-//   file_index: number;
-// };
-
 /**
  * Utility type for API responses that may contain data or an error.
  */

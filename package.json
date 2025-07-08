@@ -1,6 +1,6 @@
 {
   "name": "zapdos-js",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Zapdos client library for browser and backend environments",
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
@@ -14,7 +14,8 @@
     "dev": "vite build --watch",
     "prepublishOnly": "npm run build",
     "type-check": "tsc --noEmit",
-    "test": "npm run test:node && npm run test:common"
+    "test": "npm run test:node && npm run test:common",
+    "summarize": "repomix --include 'src/**/*.{ts,js,json,md}' --ignore '**/*.test.js' --remove-empty-lines --style markdown --no-file-summary --header-text \"This package is available as 'zapdos-js' on npm.\" --output llms.txt"
   },
   "keywords": [
     "zapdos",
