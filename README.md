@@ -93,6 +93,13 @@ const searchResult = await client.search("cats playing piano", { limit: 5 });
 console.log(searchResult.data?.items);
 ```
 
+### Get Download URLs
+
+```typescript
+const result = await client.getDownloadUrls(["object-id-0001", "object-id-0002"]);
+console.log(result.data?.urls, result.data?.expiresAt);
+```
+
 ### WebSocket (Backend Only)
 
 ```typescript
