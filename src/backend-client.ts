@@ -140,4 +140,33 @@ export class BackendZapdosClient extends ZapdosBaseClient {
       return { error: { message: error.message || "Upload failed" } };
     }
   }
+
+  /**
+   * Search by text using embeddings. Example:
+   *   client.search("cats playing piano", { limit: 5 })
+   * @param text The search query
+   * @param options Optional search options (e.g., { limit })
+   * @returns Promise with search results
+   */
+  async search<T = unknown>(
+    text: string,
+    options?: { limit?: number }
+  ): Promise<{ data: { items: T[] } } | { error: { message: string } }> {
+    text = text.trim();
+    if (!text) {
+      return { error: { message: "Search text is empty" } };
+    }
+    const url = `${this.baseUrl}/v1/search`;
+    const headers = {
+      ...this.getAuthHeader(),
+      "Content-Type": "application/json",
+    };
+    const body = { text, ...(options?.limit != null ? { limit: options.limit } : {}) };
+    try {
+      const response = await axios.post(url, body, { headers });
+      return response.data;
+    } catch (error: any) {
+      return { error: { message: error?.message ?? "Search failed" } };
+    }
+  }
 }

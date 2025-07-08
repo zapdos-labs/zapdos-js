@@ -86,6 +86,13 @@ client.from("resourceName").select("field1", "field2").where("field", "=", value
 * Backend client: Upload local files by file path(s).
 * Browser client: Upload `File` objects using signed URLs.
 
+### Search
+
+```typescript
+const searchResult = await client.search("cats playing piano", { limit: 5 });
+console.log(searchResult.data?.items);
+```
+
 ### WebSocket (Backend Only)
 
 ```typescript
