@@ -164,7 +164,7 @@ export class BackendZapdosClient extends ZapdosBaseClient {
   async getDownloadUrls(
     ids: string[]
   ): Promise<
-    { data: { urls: Record<string, string>; expiresAt: string }; error?: undefined } |
+    { data: { urls: Record<string, string>; expires_at: string }; error?: undefined } |
     { data?: undefined; error: { message: string } }
   > {
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -188,17 +188,16 @@ export class BackendZapdosClient extends ZapdosBaseClient {
    */
   async getDownloadUrl(
     id: string
-  ): Promise<
-    { data: { url: string; expiresAt: string }; error?: undefined } |
-    { data?: undefined; error: { message: string } }
-  > {
+  ) {
     const result = await this.getDownloadUrls([id]);
     if (result.error) return result; // pass through error
     const url = result.data.urls[id];
     if (!url) {
       return { error: { message: `No download URL returned for id: ${id}` } };
     }
-    return { data: { url, expiresAt: result.data.expiresAt } };
+
+    console.log('getDownloadUrl result:', result);
+    return { data: { url, expires_at: result.data.expires_at } };
   }
 
   /**
