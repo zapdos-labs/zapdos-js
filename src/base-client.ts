@@ -94,6 +94,10 @@ export abstract class ZapdosBaseClient {
     for await (const msg of stream) {
       if (msg.data.type === 'metadata_updated') {
         this.logger.log(`Metadata updated for object ${msg.data.object_id}`);
+        on?.onCompleted?.({
+          file_index: index,
+          object_id: msg.data.object_id,
+        });
       }
       if (msg.data.type === 'indexing_started') {
         this.logger.log(`Indexing started for object ${msg.data.object_id} with job ID ${msg.data.job_id}`);

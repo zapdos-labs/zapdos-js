@@ -88,15 +88,15 @@ export async function axiosUpload({
         const value = progressEvent.total
           ? Math.round((progressEvent.loaded / progressEvent.total) * 100)
           : 0;
-        callbacks?.file?.onProgress?.({ value });
+        callbacks?.onProgress?.({ value });
       },
     });
-    callbacks?.file?.onData?.(response.data);
+    callbacks?.onStored?.();
     return response.data as {
       data: {}
     };
   } catch (error: any) {
-    callbacks?.file?.onError?.({ message: error.message || "Upload failed" });
+    callbacks?.onFailed?.({ message: error.message || "Upload failed" });
     return {
       error: {
         message: error.message || "Axios Upload failed",
@@ -111,26 +111,23 @@ export function prepareMinimalCallbacks(callbacks: UploadCallbacksWithFileIndex,
   const minimalCallbacks = unextendCallbacks(callbacks, { file_index: fileIndex });
   return {
     ...minimalCallbacks,
-    file: {
-      ...minimalCallbacks?.file,
-
-      onData: (props) => {
-        const result = { ...props, file_index: fileIndex };
-        minimalCallbacks?.file?.onData?.(result);
-        resolve({
-          data: result
-        });
-        return result;
-      },
-      onError: (args) => {
-        const result = { ...args, file_index: fileIndex };
-        minimalCallbacks?.file?.onError?.(result);
-        resolve({
-          error: result
-        });
-        return result;
-      }
+    onCompleted(args) {
+      const result = { ...args, file_index: fileIndex };
+      minimalCallbacks?.onCompleted?.(result);
+      resolve({
+        data: result
+      });
+      return result;
     },
+    onFailed(args) {
+      const result = { ...args, file_index: fileIndex };
+      minimalCallbacks?.onFailed?.(result);
+      resolve({
+        error: result
+      });
+      return result;
+    }
+
   };
 }
 

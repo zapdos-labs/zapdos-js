@@ -96,18 +96,14 @@ export type JobCallbacks = {
   onIndexingFailed?: (props: { object_id: string, job_id: string }) => void;
 }
 
-export type FileCallbacks = {
-  onError?: (error: {
+export type UploadCallbacks = {
+  onFailed?: (error: {
     message: string;
   }) => void;
-  onData?: (data: { object_id: string }) => void;
+  onStored?: () => void;
+  onCompleted?: (data: { object_id: string }) => void;
   onProgress?: (progress: { value: number }) => void
-}
-
-
-
-export type UploadCallbacks = {
-  file?: FileCallbacks
+} & {
   job?: JobCallbacks
 }
 
