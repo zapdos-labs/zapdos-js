@@ -27,7 +27,7 @@ const client = createClient({
 const videos = await client.videos().fetch();
 
 // Upload local files
-const uploadResult = await client.upload(["./path/to/file1.mp4", "./path/to/file2.png"], {
+const uploadResult = await client.upload(["./path/to/file1.mp4", "./path/to/file2.mkv"], {
   file: {
     onProgress: ({ file_index, value }) => {
       console.log(`File ${file_index} progress: ${value * 100}%`);
@@ -97,7 +97,7 @@ console.log(searchResult.data?.items);
 
 ```typescript
 const result = await client.getDownloadUrls(["object-id-0001", "object-id-0002"]);
-console.log(result.data?.urls, result.data?.expiresAt);
+console.log(result.data?.urls, result.data?.expires_at);
 ```
 
 ### WebSocket (Backend Only)
