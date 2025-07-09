@@ -68,7 +68,7 @@ export class BackendZapdosClient extends ZapdosBaseClient {
     });
 
     ws.onopen = (event: any) => {
-      console.log("WebSocket connected");
+      this.logger.log("WebSocket connected");
       opts.onOpen?.(event);
     };
 
@@ -78,20 +78,20 @@ export class BackendZapdosClient extends ZapdosBaseClient {
         try {
           opts.onMessage?.(data);
         } catch (error) {
-          console.error("Error in onMessage callback:", error);
+          this.logger.error("Error in onMessage callback:", error);
         }
       } catch (error) {
-        console.error("Failed to parse WebSocket message:", error);
+        this.logger.error("Failed to parse WebSocket message:", error);
       }
     };
 
     ws.onerror = (error: any) => {
-      console.error("WebSocket error:", error);
+      this.logger.error("WebSocket error:", error);
       opts.onError?.(error);
     };
 
     ws.onclose = (event: any) => {
-      console.log("WebSocket disconnected:", event.code, event.reason);
+      this.logger.log("WebSocket disconnected:", event.code, event.reason);
       opts.onClose?.(event);
     };
 
@@ -268,7 +268,7 @@ export class BackendZapdosClient extends ZapdosBaseClient {
       });
       return this.uploadWithSignedUrls(items, on);
     } catch (error: any) {
-      console.error("Error during upload:", error);
+      this.logger.error("Error during upload:", error);
       return { error: { message: error.message || "Upload failed" } };
     }
   }

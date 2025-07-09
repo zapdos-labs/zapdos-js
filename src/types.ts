@@ -2,6 +2,7 @@ import { ReadStream } from "node:fs";
 
 export interface BaseClientOptions {
   baseUrl?: string;
+  verbose?: boolean;
 }
 
 export interface BackendClientOptions extends BaseClientOptions {
@@ -90,9 +91,9 @@ export type UpdateMetadataReturnedJSON =
   | { data: { type: "indexing_failed"; job_id: string; object_id: string } };
 
 export type JobCallbacks = {
-  onIndexingStarted?: (props: { object_id: string }) => void;
-  onIndexingCompleted?: (props: { object_id: string }) => void;
-  onIndexingFailed?: (props: { object_id: string }) => void;
+  onIndexingStarted?: (props: { object_id: string, job_id: string }) => void;
+  onIndexingCompleted?: (props: { object_id: string, job_id: string }) => void;
+  onIndexingFailed?: (props: { object_id: string, job_id: string }) => void;
 }
 
 export type FileCallbacks = {

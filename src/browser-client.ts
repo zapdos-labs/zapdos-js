@@ -18,8 +18,7 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
     }
     super(options);
 
-    // Simple log to confirm client creation
-    console.log("Zapdos client created in browser");
+    this.logger.log("Zapdos client created in browser");
   }
 
 

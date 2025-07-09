@@ -92,10 +92,16 @@ export async function axiosUpload({
       },
     });
     callbacks?.file?.onData?.(response.data);
-    return response.data;
+    return response.data as {
+      data: {}
+    };
   } catch (error: any) {
     callbacks?.file?.onError?.({ message: error.message || "Upload failed" });
-    throw error;
+    return {
+      error: {
+        message: error.message || "Axios Upload failed",
+      }
+    }
   }
 }
 
@@ -145,7 +151,6 @@ type Result = {
  */
 export async function batchUpload(opts: {
   authHeader?: Record<string, string>;
-  method: "POST" | "PUT";
   items: AxiosUploadItem[];
   callbacks?: UploadCallbacksWithFileIndex;
 }) {
@@ -157,11 +162,16 @@ export async function batchUpload(opts: {
       }
       const result = await axiosUpload({
         url: item.url,
-        method: opts.method,
+        method: 'PUT',
         file: item.data,
         headers: opts.authHeader,
         callbacks: minimumCallbacks,
       });
+
+      // Trigger updating metadata & indexing job
+      (async () => {
+        await item.afterFileData()
+      })()
 
       return { data: result };
     })

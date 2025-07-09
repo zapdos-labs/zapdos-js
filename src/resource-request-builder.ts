@@ -33,7 +33,6 @@
  * ```
  */
 import axios from "axios";
-import type { ZapdosBaseClient } from "./base-client";
 
 // This class is not exported. It contains the core logic for making the request
 // and handling the promise-like behavior.
