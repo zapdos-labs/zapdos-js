@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AxiosUploadItem, unextendCallbacks, UploadCallbacks, UploadCallbacksWithFileIndex } from "./types";
+import { AxiosUploadItem, unextendCallbacks, UpdateMetadataReturnedJSON, UploadCallbacks, UploadCallbacksWithFileIndex } from "./types";
 import { ReadStream } from "fs";
 
 /**
@@ -127,7 +127,6 @@ export function prepareMinimalCallbacks(callbacks: UploadCallbacksWithFileIndex,
       });
       return result;
     }
-
   };
 }
 
@@ -147,18 +146,21 @@ type Result = {
  * Common batch upload handler for both browser and backend clients
  */
 export async function batchUpload(opts: {
+  baseUrl: string;
   authHeader?: Record<string, string>;
   items: AxiosUploadItem[];
   callbacks?: UploadCallbacksWithFileIndex;
 }) {
-  const uploadPromises = opts.items.map((item, idx) =>
+  const uploadPromises = opts.items.map((item) =>
     new Promise<Result>(async (resolve) => {
       let minimumCallbacks: UploadCallbacks | undefined = undefined;
       if (opts.callbacks) {
-        minimumCallbacks = prepareMinimalCallbacks(opts.callbacks, idx, resolve);
+        minimumCallbacks = prepareMinimalCallbacks(opts.callbacks, item.index, resolve);
       }
-      const result = await axiosUpload({
-        url: item.url,
+
+      // Uploading to signed url just returns null
+      const _ = await axiosUpload({
+        url: item.signedUrl,
         method: 'PUT',
         file: item.data,
         headers: opts.authHeader,
@@ -167,12 +169,24 @@ export async function batchUpload(opts: {
 
       // Trigger updating metadata & indexing job
       (async () => {
-        await item.afterFileData()
-      })()
+        const headers = {
+          "X-Zapdos-Token": item.token,
+          "Content-Type": "application/json",
+        };
+        const stream = await updateObjectMetadata({
+          url: `${opts.baseUrl}/v1/storage/${item.object_id}`,
+          headers,
+          metadata: item.metadata,
+        });
 
-      return { data: result };
+        if (stream) {
+          handleStream(stream, minimumCallbacks);
+        }
+      })();
     })
   );
+
+
   const results = await Promise.all(uploadPromises);
   return results.toSorted((a, b) => (a?.data || a.error).file_index - (b?.data || b.error).file_index);
 }
@@ -189,4 +203,55 @@ export function parseSignedUrl(signedUrl: string) {
   }
 
   return { token, object_id, cleanedUrl };
+}
+
+
+async function updateObjectMetadata(opts: {
+  url: string;
+  headers?: Record<string, string>;
+  metadata: Record<string, any>;
+}) {
+  const response = await fetch(opts.url, {
+    method: "PATCH",
+    headers: opts.headers,
+    // TODO: Allow setting create_indexing_job to false
+    // User would have to manually triggering indexing job later
+    // This means decoupling the indexing job logic from metadata update route in the backend
+    body: JSON.stringify({ metadata: opts.metadata, create_indexing_job: true }),
+  });
+  if (!response.body) return;
+
+  const stream = parseNDJSONStream(response.body) as AsyncGenerator<UpdateMetadataReturnedJSON, void, unknown>;
+  return stream;
+}
+
+
+async function handleStream(stream: AsyncGenerator<UpdateMetadataReturnedJSON, void, unknown>, on?: UploadCallbacks) {
+  for await (const msg of stream) {
+    if (msg.data.type === 'metadata_updated') {
+      on?.onCompleted?.({
+        object_id: msg.data.object_id,
+      });
+    }
+    if (msg.data.type === 'indexing_started') {
+      on?.job?.onIndexingStarted?.({
+        object_id: msg.data.object_id,
+        job_id: msg.data.job_id,
+      });
+    }
+
+    if (msg.data.type === 'indexing_failed') {
+      on?.job?.onIndexingFailed?.({
+        object_id: msg.data.object_id,
+        job_id: msg.data.job_id,
+      });
+    }
+
+    if (msg.data.type === 'indexing_completed') {
+      on?.job?.onIndexingCompleted?.({
+        object_id: msg.data.object_id,
+        job_id: msg.data.job_id,
+      });
+    }
+  }
 }

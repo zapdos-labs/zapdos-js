@@ -175,7 +175,16 @@ export type UploadItem = {
 }
 
 export type AxiosUploadItem = {
-  url: string;
+  index: number;
+  signedUrl: string;
   data: ReadStream | File;
-  afterFileData: () => Promise<void>;
+  token: string;
+  object_id: string;
+  metadata: {
+    file_name: string,
+    size: number,
+    content_type: string,
+    kind: string,
+  }
+
 }
