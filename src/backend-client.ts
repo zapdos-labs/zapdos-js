@@ -109,6 +109,22 @@ export class BackendZapdosClient extends ZapdosBaseClient {
   }
 
   /**
+   * Get a single signed upload URL.
+   * @returns Promise with a single URL or error
+   */
+  async getUploadUrl(): Promise<
+    { data: string; error?: undefined } |
+    { data?: undefined; error: { message: string } }
+  > {
+    const result = await this.getUploadUrls(1);
+    if (result.error) return result; // pass through error
+    if (!result.data || !result.data[0]) {
+      return { error: { message: "No upload URL returned from server" } };
+    }
+    return { data: result.data[0] };
+  }
+
+  /**
    * Search by text using embeddings. Example:
    *   client.search("cats playing piano", { limit: 5 })
    * @param text The search query
@@ -163,6 +179,26 @@ export class BackendZapdosClient extends ZapdosBaseClient {
     } catch (error: any) {
       return { error: { message: error?.message ?? "Failed to get download URLs" } };
     }
+  }
+
+  /**
+   * Get a single signed download URL for an object ID.
+   * @param id Object ID
+   * @returns Promise with a single URL or error
+   */
+  async getDownloadUrl(
+    id: string
+  ): Promise<
+    { data: { url: string; expiresAt: string }; error?: undefined } |
+    { data?: undefined; error: { message: string } }
+  > {
+    const result = await this.getDownloadUrls([id]);
+    if (result.error) return result; // pass through error
+    const url = result.data.urls[id];
+    if (!url) {
+      return { error: { message: `No download URL returned for id: ${id}` } };
+    }
+    return { data: { url, expiresAt: result.data.expiresAt } };
   }
 
   /**
