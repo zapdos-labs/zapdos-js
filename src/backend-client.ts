@@ -188,7 +188,10 @@ export class BackendZapdosClient extends ZapdosBaseClient {
    */
   async getDownloadUrl(
     id: string
-  ) {
+  ): Promise<
+    { data: { url: string; expires_at: string }; error?: undefined } |
+    { data?: undefined; error: { message: string } }
+  > {
     const result = await this.getDownloadUrls([id]);
     if (result.error) return result; // pass through error
     const url = result.data.urls[id];
