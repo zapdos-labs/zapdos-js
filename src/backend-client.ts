@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import WebSocketImpl from "ws";
 import { ZapdosBaseClient } from "./base-client";
-import { ResourceRequestBuilderWithSelect } from "./resource-request-builder";
+import { QueryBuilder, UnselectedQueryBuilder } from "./resource-request-builder";
 import type {
   BackendClientOptions,
   Environment,
@@ -12,7 +12,7 @@ import type {
   ObjectStorageResponse,
   UploadCallbacksWithFileIndex,
   UploadItem,
-  WebSocketOptions,
+  WebSocketOptions
 } from "./types";
 
 export class BackendZapdosClient extends ZapdosBaseClient {
@@ -34,8 +34,8 @@ export class BackendZapdosClient extends ZapdosBaseClient {
     this.apiKey = options.apiKey;
   }
 
-  from<T = any>(resource: string): ResourceRequestBuilderWithSelect<T> {
-    return new ResourceRequestBuilderWithSelect<T>(this.baseUrl, this.getAuthHeader(), resource);
+  from<T = any>(resource: string): UnselectedQueryBuilder<T> {
+    return new UnselectedQueryBuilder<T>(this.baseUrl, this.getAuthHeader(), resource);
   }
 
   getAuthHeader(): Record<string, string> {
@@ -59,6 +59,13 @@ export class BackendZapdosClient extends ZapdosBaseClient {
 
   jobs() {
     return this.from<JobsResponse>("jobs").select();
+  }
+
+  scenes(video_id: string): QueryBuilder<ObjectStorageResponse> {
+    return this.from<ObjectStorageResponse>("object_storage")
+      .select()
+      .where("metadata->>'video_id'", "=", video_id)
+      .where("metadata->>'kind'", "=", "scene");
   }
 
   listen(opts: WebSocketOptions) {

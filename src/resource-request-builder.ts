@@ -46,7 +46,7 @@ class RequestBuilderCore<T> {
 
   }
 
-  protected getPromise(): Promise<T | { error: any }> {
+  protected getPromise(): Promise<T> {
     const url = `${this.baseUrl}/v1/query`;
     // The request body is flattened, with `from` at the top level.
     const body = {
@@ -75,26 +75,26 @@ class RequestBuilderCore<T> {
 }
 
 /**
- * The final builder, returned after .select().
+ * Query builder.
  * It has all the query methods like .where(), .limit(), etc., and is thenable.
  */
-export class ResourceRequestBuilderSelected<T> extends RequestBuilderCore<T> {
-  limit(limit: number) {
+export class QueryBuilder<T> extends RequestBuilderCore<T> {
+  limit(limit: number): QueryBuilder<T> {
     this.queryParams["limit"] = limit;
     return this;
   }
 
-  sort(sort: "asc" | "desc") {
+  sort(sort: "asc" | "desc"): QueryBuilder<T> {
     this.queryParams["sort"] = sort;
     return this;
   }
 
-  cursor(cursor: string) {
+  cursor(cursor: string): QueryBuilder<T> {
     this.queryParams["cursor"] = cursor;
     return this;
   }
 
-  where(field: string, operator: string, value: any) {
+  where(field: string, operator: string, value: string | number): QueryBuilder<T> {
     if (!this.queryParams.where) {
       this.queryParams.where = [];
     }
@@ -104,14 +104,14 @@ export class ResourceRequestBuilderSelected<T> extends RequestBuilderCore<T> {
 
   then<TResult1 = T, TResult2 = never>(
     onfulfilled?:
-      | ((value: T | { error: any }) => TResult1 | PromiseLike<TResult1>)
+      | ((value: T) => TResult1 | PromiseLike<TResult1>)
       | undefined
       | null,
     onrejected?:
       | ((reason: any) => TResult2 | PromiseLike<TResult2>)
       | undefined
       | null,
-  ): Promise<TResult1 | TResult2> {
+  ) {
     return this.getPromise().then(onfulfilled, onrejected);
   }
 
@@ -120,17 +120,17 @@ export class ResourceRequestBuilderSelected<T> extends RequestBuilderCore<T> {
       | ((reason: any) => TResult | PromiseLike<TResult>)
       | undefined
       | null,
-  ): Promise<T | { error: any } | TResult> {
+  ) {
     return this.getPromise().catch(onrejected);
   }
 
   finally(
     onfinally?: (() => void) | undefined | null,
-  ): Promise<T | { error: any }> {
+  ) {
     return this.getPromise().finally(onfinally);
   }
 
-  fetch(): Promise<T | { error: any }> {
+  fetch(): Promise<T> {
     return this.getPromise();
   }
 }
@@ -139,7 +139,7 @@ export class ResourceRequestBuilderSelected<T> extends RequestBuilderCore<T> {
  * Builder returned by .from(). This class only exposes a .select() method,
  * enforcing the next step in the chain.
  */
-export class ResourceRequestBuilderWithSelect<T> {
+export class UnselectedQueryBuilder<T> {
 
   constructor(
     public baseUrl: string,
@@ -152,12 +152,12 @@ export class ResourceRequestBuilderWithSelect<T> {
    * @param columns The column names to select.
    * @returns The full builder with all query methods.
    */
-  select(...columns: string[]): ResourceRequestBuilderSelected<T> {
+  select(...columns: string[]): QueryBuilder<T> {
     const queryParams = {
       where: [],
       select: columns.length > 0 ? columns : ["*"], // Default to selecting all if no columns are provided
     };
-    return new ResourceRequestBuilderSelected<T>(
+    return new QueryBuilder<T>(
       this.baseUrl,
       this.headers,
       this.resource,
@@ -165,3 +165,4 @@ export class ResourceRequestBuilderWithSelect<T> {
     );
   }
 }
+
