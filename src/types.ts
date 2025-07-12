@@ -189,3 +189,19 @@ export type AxiosUploadItem = {
   }
 
 }
+
+
+export type SearchResultItem = {
+  id: string;
+  type: "scene";
+  score: number;
+  metadata: {
+    end_ms: number;
+    object_id: string;
+    object_original_name: string;
+    scene_image_object_id: string;
+    scene_index: number;
+    start_ms: number;
+  };
+};
+

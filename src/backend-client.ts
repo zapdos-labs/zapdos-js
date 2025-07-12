@@ -10,6 +10,7 @@ import type {
   GetUploadUrlsResult,
   JobsResponse,
   ObjectStorageResponse,
+  SearchResultItem,
   UploadCallbacksWithFileIndex,
   UploadItem,
   WebSocketOptions
@@ -138,11 +139,11 @@ export class BackendZapdosClient extends ZapdosBaseClient {
    * @param options Optional search options (e.g., { limit, object_ids })
    * @returns Promise with result type: { data, error? } | { error, data? }
    */
-  async search<T = unknown>(
+  async search(
     text: string,
-    options?: { limit?: number; object_ids?: string[] }
+    options?: { limit?: number; object_ids?: string[]; video_id?: string }
   ): Promise<
-    { data: { items: T[] }; error?: undefined } |
+    { data: { items: SearchResultItem[] }; error?: undefined } |
     { data?: undefined; error: { message: string } }
   > {
     text = text.trim();
@@ -160,6 +161,9 @@ export class BackendZapdosClient extends ZapdosBaseClient {
     if (options?.limit != null) body.limit = options.limit;
     if (options?.object_ids && Array.isArray(options.object_ids) && options.object_ids.length > 0) {
       body.object_ids = options.object_ids;
+    }
+    if (options?.video_id) {
+      body.video_id = options.video_id;
     }
     try {
       const response = await axios.post(url, body, { headers });
