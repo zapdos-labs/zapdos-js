@@ -85,10 +85,11 @@ export type GetUploadUrlsResult = {
 };
 
 export type UpdateMetadataReturnedJSON =
-  | { data: { type: "metadata_updated"; object_id: string } }
-  | { data: { type: "indexing_started"; job_id: string; object_id: string } }
-  | { data: { type: "indexing_completed"; job_id: string; object_id: string } }
-  | { data: { type: "indexing_failed"; job_id: string; object_id: string } };
+  | { data: { type: "metadata_updated"; object_id: string }; error?: undefined }
+  | { data: { type: "indexing_started"; job_id: string; object_id: string }; error?: undefined }
+  | { data: { type: "indexing_completed"; job_id: string; object_id: string }; error?: undefined }
+  | { data: { type: "indexing_failed"; job_id: string; object_id: string }; error?: undefined }
+  | { error: { message: string }; data?: undefined }
 
 export type JobCallbacks = {
   onIndexingStarted?: (props: { object_id: string, job_id: string }) => void;

@@ -126,14 +126,14 @@ export class BackendZapdosClient extends ZapdosBaseClient {
 
   /**
    * Search by text using embeddings. Example:
-   *   client.search("cats playing piano", { limit: 5 })
+   *   client.search("cats playing piano", { limit: 5, object_ids: ["id1", "id2"] })
    * @param text The search query
-   * @param options Optional search options (e.g., { limit })
+   * @param options Optional search options (e.g., { limit, object_ids })
    * @returns Promise with result type: { data, error? } | { error, data? }
    */
   async search<T = unknown>(
     text: string,
-    options?: { limit?: number }
+    options?: { limit?: number; object_ids?: string[] }
   ): Promise<
     { data: { items: T[] }; error?: undefined } |
     { data?: undefined; error: { message: string } }
@@ -147,7 +147,13 @@ export class BackendZapdosClient extends ZapdosBaseClient {
       ...this.getAuthHeader(),
       "Content-Type": "application/json",
     };
-    const body = { text, ...(options?.limit != null ? { limit: options.limit } : {}) };
+    const body: any = {
+      text,
+    };
+    if (options?.limit != null) body.limit = options.limit;
+    if (options?.object_ids && Array.isArray(options.object_ids) && options.object_ids.length > 0) {
+      body.object_ids = options.object_ids;
+    }
     try {
       const response = await axios.post(url, body, { headers });
       return { data: response.data.data };

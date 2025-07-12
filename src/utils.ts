@@ -228,6 +228,11 @@ async function updateObjectMetadata(opts: {
 
 async function handleStream(stream: AsyncGenerator<UpdateMetadataReturnedJSON, void, unknown>, on?: UploadCallbacks) {
   for await (const msg of stream) {
+    if (msg.error) {
+      console.log("Error in metadata update stream", msg.error);
+      continue;
+    }
+
     if (msg.data.type === 'metadata_updated') {
       on?.onCompleted?.({
         object_id: msg.data.object_id,
