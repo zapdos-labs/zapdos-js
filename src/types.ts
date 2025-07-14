@@ -89,12 +89,14 @@ export type UpdateMetadataReturnedJSON =
   | { data: { type: "indexing_started"; job_id: string; object_id: string }; error?: undefined }
   | { data: { type: "indexing_completed"; job_id: string; object_id: string }; error?: undefined }
   | { data: { type: "indexing_failed"; job_id: string; object_id: string }; error?: undefined }
+  | { data: { type: "transcription"; job_id: string; object_id: string }; error?: undefined }
   | { error: { message: string }; data?: undefined }
 
 export type JobCallbacks = {
   onIndexingStarted?: (props: { object_id: string, job_id: string }) => void;
   onIndexingCompleted?: (props: { object_id: string, job_id: string }) => void;
   onIndexingFailed?: (props: { object_id: string, job_id: string }) => void;
+  onTranscription?: (props: { object_id: string, job_id: string }) => void;
 }
 
 export type UploadCallbacks = {

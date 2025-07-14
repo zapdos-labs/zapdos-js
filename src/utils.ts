@@ -217,7 +217,11 @@ async function updateObjectMetadata(opts: {
     // TODO: Allow setting create_indexing_job to false
     // User would have to manually triggering indexing job later
     // This means decoupling the indexing job logic from metadata update route in the backend
-    body: JSON.stringify({ metadata: opts.metadata, create_indexing_job: true }),
+    body: JSON.stringify({
+      metadata: opts.metadata,
+      create_indexing_job: true,
+      create_transcription_job: true,
+    }),
   });
   if (!response.body) return;
 
