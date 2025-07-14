@@ -214,13 +214,15 @@ async function updateObjectMetadata(opts: {
   const response = await fetch(opts.url, {
     method: "PATCH",
     headers: opts.headers,
+    // FLAGS
     // TODO: Allow setting create_indexing_job to false
     // User would have to manually triggering indexing job later
     // This means decoupling the indexing job logic from metadata update route in the backend
+    // Currently the backend always creates an indexing job when metadata is updated
+    // Only that the route returns immediately and the job is processed in the background
     body: JSON.stringify({
       metadata: opts.metadata,
       create_indexing_job: true,
-      create_transcription_job: true,
     }),
   });
   if (!response.body) return;
