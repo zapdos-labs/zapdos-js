@@ -33,6 +33,7 @@
  * ```
  */
 import axios from "axios";
+import { Maybe } from "./types";
 
 // This class is not exported. It contains the core logic for making the request
 // and handling the promise-like behavior.
@@ -78,7 +79,8 @@ class RequestBuilderCore<T> {
  * Query builder.
  * It has all the query methods like .where(), .limit(), etc., and is thenable.
  */
-export class QueryBuilder<T> extends RequestBuilderCore<T> {
+
+export class QueryBuilder<T> extends RequestBuilderCore<Maybe<T[]>> {
   limit(limit: number): QueryBuilder<T> {
     this.queryParams["limit"] = limit;
     return this;
@@ -102,9 +104,9 @@ export class QueryBuilder<T> extends RequestBuilderCore<T> {
     return this;
   }
 
-  then<TResult1 = T, TResult2 = never>(
+  then<TResult1 = Maybe<T[]>, TResult2 = never>(
     onfulfilled?:
-      | ((value: T) => TResult1 | PromiseLike<TResult1>)
+      | ((value: Maybe<T[]>) => TResult1 | PromiseLike<TResult1>)
       | undefined
       | null,
     onrejected?:
@@ -130,8 +132,25 @@ export class QueryBuilder<T> extends RequestBuilderCore<T> {
     return this.getPromise().finally(onfinally);
   }
 
-  fetch(): Promise<T> {
+  fetch(): Promise<Maybe<T[]>> {
     return this.getPromise();
+  }
+
+  /**
+   * Fetch a single result. Throws if not exactly one result is returned.
+   * Returns { data, error } result type.
+   */
+  async single(): Promise<Maybe<T>> {
+    const result = await this.getPromise();
+    if (result.error) {
+      return { data: undefined, error: result.error };
+    }
+    if (Array.isArray(result.data) && result.data.length === 1) {
+      return { data: result.data[0], error: undefined };
+    }
+    return {
+      data: undefined, error: { message: "Expected exactly one result" }
+    };
   }
 }
 
@@ -140,7 +159,6 @@ export class QueryBuilder<T> extends RequestBuilderCore<T> {
  * enforcing the next step in the chain.
  */
 export class UnselectedQueryBuilder<T> {
-
   constructor(
     public baseUrl: string,
     public headers: Record<string, string>,
@@ -155,7 +173,7 @@ export class UnselectedQueryBuilder<T> {
   select(...columns: string[]): QueryBuilder<T> {
     const queryParams = {
       where: [],
-      select: columns.length > 0 ? columns : ["*"], // Default to selecting all if no columns are provided
+      select: columns.length > 0 ? columns : ["*"],
     };
     return new QueryBuilder<T>(
       this.baseUrl,

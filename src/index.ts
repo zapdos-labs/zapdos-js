@@ -4,6 +4,8 @@ import type {
   BackendClientOptions,
   BrowserClientOptions,
   BaseClientOptions,
+  ObjectStorageItem,
+  VideoObject
 } from "./types";
 
 /**
@@ -21,7 +23,7 @@ export function createBrowserClient(options: BrowserClientOptions) {
 }
 
 // Export types for consumers
-export type { BackendClientOptions, BaseClientOptions, BrowserClientOptions };
+export type { BackendClientOptions, BaseClientOptions, BrowserClientOptions, ObjectStorageItem, VideoObject };
 
 // Default export for convenience
 export default { createClient, createBrowserClient };

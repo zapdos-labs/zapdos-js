@@ -45,12 +45,42 @@ export interface ObjectStorageItem {
   id: string;
   metadata: ObjectMetadata;
   org_id: string;
+  content?: {};
 }
 
-/**
- * Type for the object storage response.
- */
-export type ObjectStorageResponse = Maybe<ObjectStorageItem[]>;
+
+export type TranscriptionWord = {
+  word: string;
+  start: number;
+  end: number;
+  score?: number;
+};
+
+export type TranscriptionSegment = {
+  id: number | string;
+  start: number;
+  end: number;
+  text: string;
+  speaker?: string;
+  words?: TranscriptionWord[];
+};
+
+export type Transcription = {
+  segments: TranscriptionSegment[];
+  language: string;
+  duration?: number;
+  report?: Record<string, any>;
+};
+
+export type VideoObject = ObjectStorageItem & {
+  content?: {
+    scenes?: {
+      object_id: string;
+      embedding_id: string;
+    }[],
+    transcription?: Transcription
+  }
+}
 
 /**
  * Type for the job content object.

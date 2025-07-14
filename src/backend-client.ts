@@ -8,11 +8,12 @@ import type {
   BackendClientOptions,
   Environment,
   GetUploadUrlsResult,
-  JobsResponse,
-  ObjectStorageResponse,
+  JobItem,
+  ObjectStorageItem,
   SearchResultItem,
   UploadCallbacksWithFileIndex,
   UploadItem,
+  VideoObject,
   WebSocketOptions
 } from "./types";
 
@@ -35,7 +36,7 @@ export class BackendZapdosClient extends ZapdosBaseClient {
     this.apiKey = options.apiKey;
   }
 
-  from<T = any>(resource: string): UnselectedQueryBuilder<T> {
+  from<T>(resource: string): UnselectedQueryBuilder<T> {
     return new UnselectedQueryBuilder<T>(this.baseUrl, this.getAuthHeader(), resource);
   }
 
@@ -46,24 +47,25 @@ export class BackendZapdosClient extends ZapdosBaseClient {
   }
 
   // Convenient methods to query
+
   videos() {
-    return this.from<ObjectStorageResponse>("object_storage")
+    return this.from<VideoObject>("object_storage")
       .select()
       .where("metadata->>'content_type'", "~", "^video/");
   }
 
   images() {
-    return this.from<ObjectStorageResponse>("object_storage")
+    return this.from<ObjectStorageItem>("object_storage")
       .select()
       .where("metadata->>'content_type'", "~", "^image/");
   }
 
   jobs() {
-    return this.from<JobsResponse>("jobs").select();
+    return this.from<JobItem>("jobs").select();
   }
 
-  scenes(video_id: string): QueryBuilder<ObjectStorageResponse> {
-    return this.from<ObjectStorageResponse>("object_storage")
+  scenes(video_id: string): QueryBuilder<ObjectStorageItem> {
+    return this.from<ObjectStorageItem>("object_storage")
       .select()
       .where("metadata->'parents'", "@>", `["${video_id}"]`)
       .where("metadata->>'kind'", "=", "scene");
