@@ -65,7 +65,7 @@ export class BackendZapdosClient extends ZapdosBaseClient {
   scenes(video_id: string): QueryBuilder<ObjectStorageResponse> {
     return this.from<ObjectStorageResponse>("object_storage")
       .select()
-      .where("metadata->>'video_id'", "=", video_id)
+      .where("metadata->'parents'", "@>", `["${video_id}"]`)
       .where("metadata->>'kind'", "=", "scene");
   }
 
