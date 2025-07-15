@@ -51,15 +51,15 @@ export interface ObjectStorageItem {
 
 export type TranscriptionWord = {
   word: string;
-  start: number;
-  end: number;
+  start_ms: number;
+  end_ms: number;
   score?: number;
 };
 
 export type TranscriptionSegment = {
   id: number | string;
-  start: number;
-  end: number;
+  start_ms: number;
+  end_ms: number;
   text: string;
   speaker?: string;
   words?: TranscriptionWord[];
@@ -77,6 +77,9 @@ export type VideoObject = ObjectStorageItem & {
     scenes?: {
       object_id: string;
       embedding_id: string;
+      scene_index: number;
+      start_ms: number;
+      end_ms: number;
     }[],
     transcription?: Transcription
   }
