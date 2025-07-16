@@ -12,10 +12,7 @@ export class BrowserZapdosClient extends ZapdosBaseClient {
     return "browser";
   }
 
-  constructor(options: BrowserClientOptions) {
-    if (!options) {
-      throw new Error("Missing browser client options");
-    }
+  constructor(options?: BrowserClientOptions) {
     super(options);
 
     this.logger.log("Zapdos client created in browser");

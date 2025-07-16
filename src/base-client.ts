@@ -12,9 +12,9 @@ export abstract class ZapdosBaseClient {
   public readonly wsBaseUrl: string;
   public readonly logger: Logger;
 
-  constructor(opts: BaseClientOptions) {
+  constructor(opts?: BaseClientOptions) {
     this.baseUrl =
-      opts.baseUrl?.replace(/\/+$/, "") || "https://api.zapdoslabs.com";
+      opts?.baseUrl?.replace(/\/+$/, "") || "https://api.zapdoslabs.com";
     if (this.baseUrl.startsWith("https://")) {
       this.wsBaseUrl = this.baseUrl.replace("https://", "wss://") + "/v1/ws";
     } else if (this.baseUrl.startsWith("http://")) {
@@ -22,7 +22,7 @@ export abstract class ZapdosBaseClient {
     } else {
       throw new Error("baseUrl must start with https:// or http://");
     }
-    this.logger = new Logger(opts.verbose);
+    this.logger = new Logger(opts?.verbose);
   }
 
   /**

@@ -18,7 +18,7 @@ export function createClient(options: BackendClientOptions) {
 /**
  * Create a Zapdos client for browser only.
  */
-export function createBrowserClient(options: BrowserClientOptions) {
+export function createBrowserClient(options?: BrowserClientOptions) {
   return new BrowserZapdosClient(options);
 }
 

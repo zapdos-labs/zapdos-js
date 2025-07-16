@@ -23,6 +23,7 @@ export class BackendZapdosClient extends ZapdosBaseClient {
   }
   public readonly apiKey: string;
 
+  // Enforce API key in constructor
   constructor(options: BackendClientOptions) {
     super(options);
     if (!options) {
