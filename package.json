@@ -1,6 +1,6 @@
 {
   "name": "zapdos-js",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "Zapdos client library",
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
